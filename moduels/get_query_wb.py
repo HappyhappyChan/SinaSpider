@@ -16,9 +16,9 @@ import sys
 
 
 # 相当于主函数
-def get_query_wb(since_date,topic=False, json=False, csv=False):
+def get_query_wb(since_date,entity_list,topic=False, json=False, csv=False):
 #    search_list = ['新型冠状病毒', 'AI', '经济学', '管理学']
-    search_list = ['新型冠状病毒']
+    search_list = entity_list
     test_date = since_date
     # 添加50个热搜入检索词
     if topic:
