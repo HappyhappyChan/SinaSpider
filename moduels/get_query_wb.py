@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Sun May 17 2020
-@author: Ying, Le_C
-"""
+
 import re
 import csv
 import time
@@ -15,7 +12,7 @@ from jsonpath import jsonpath
 from get_topic import get_hot
 from datetime import datetime, timedelta
 from urllib.parse import quote
-
+import os
 
 # 相当于主函数
 def get_query_wb(entity_list, topic=False, json=False, csv=False, since_date=None):
@@ -45,7 +42,7 @@ def printJson(results_dict):
 
 
 def printCSV(results_list):
-    headers = ['检索词', '用户id', '用户名', '微博id', '话题', '微博正文', '发表时间']
+    headers = ['检索词', '用户id', '用户名','用户头像', '微博id', '话题', '微博正文', '发表时间']
     with open('query.csv', 'w', newline='', errors='ignore') as f:
         f_csv = csv.DictWriter(f, headers)
         f_csv.writeheader()
@@ -77,6 +74,25 @@ def getText(mblog):
     return getTopic(text), text
 
 
+        
+##########测试下载图片
+#def get_profile_img_url(mblog):
+#    """获取微博原始图片url"""
+#    if weibo_info.get('pics'):
+#        pic_info = weibo_info['pics']
+#        pic_list = [pic['large']['url'] for pic in pic_info]
+#        pics = ','.join(pic_list)
+#    else:
+#        pics = ''
+#    return pics
+#    
+#    if mblog[]:
+        
+
+
+
+###########
+
 # 输入检索词得到wbid，用户id及用户名
 def get_info(search_list, since_date=None):
     print('Start Time: ' + str(datetime.now()))
@@ -92,7 +108,7 @@ def get_info(search_list, since_date=None):
         # 获取多页该检索词的结果页面
         page = 0
         flag = True
-        while flag:
+        while page<1 and flag == True:
             try:
                 page = page + 1
                 this_url = base_url + str(page)
@@ -109,10 +125,12 @@ def get_info(search_list, since_date=None):
                     for mblog in mblogs:
                         mblog['created_at'] = standardize_date(mblog['created_at'])
                         this_topic, this_text = getText(mblog)
+                        this_profileImgUrl  = getProfileImageUrl(mblog)
                         this_dict = {
                                     '检索词': str(wd),
                                     '用户id': mblog['user']['id'], 
                                     '用户名': mblog['user']['screen_name'], 
+                                    '用户头像':this_profileImgUrl,
                                     '微博id': mblog['id'],
                                     '话题': this_topic,
                                     '微博正文': this_text,
@@ -168,6 +186,64 @@ def standardize_date(created_at):
     return created_at
 
 
-#if __name__ == '__main__':
-#    te11 = '2020-06-05'
-#    get_query_wb(entity_list = ['新型冠状病毒'],since_date = te11,json=True, csv=True)
+def getProfileImageUrl(mblog):
+    regex = re.compile('(.*?jpg)')
+    text = mblog['user']['profile_image_url']
+    profile = '' 
+    for r in regex.findall(text):
+        profile += r +'\n'
+    return profile
+    
+    
+#def downloadProfileImg(savepath, imgurl, uid):
+##    img = requests.get(imgurl)
+##    file = open(savepath + '\\' + str(uid)+str(imgurl[-4:]),'ab')
+##    file.write(img.content)
+##    file.close()
+#    i = 0
+#    length = len(uid)
+#    while i < length:
+#        try:
+#            img = requests.get(imgurl)
+#            with open(savepath + '\\' + str(uid[i])+str(imgurl[i][-4:]),'ab') as file:
+#                file.write(img.content)
+#        except Exception:
+#            print('Error: ')
+#            traceback.print_exc()
+#        i += 1
+        
+            
+def downloadProfileImg(savepath, reslist):
+#    img = requests.get(imgurl)
+#    file = open(savepath + '\\' + str(uid)+str(imgurl[-4:]),'ab')
+#    file.write(img.content)
+#    file.close()
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US; rv:1.9.1.6) Gecko/20091201 Firefox/3.5.6'}
+    i = 0
+    length = len(reslist)
+    while i < length/2:
+        try:
+            
+            imgurl = reslist[i]['用户头像']
+            img = requests.get(imgurl,headers=headers)
+#            img = json.loads(img.text)
+            uid = reslist[i]['用户id']
+            #在下面这里的jpg卡了很久……原先一直用str(imgurl[-4:]) 结果老是在句尾出现\n，至今不明
+            saveFile = savepath + str(uid)+".jpg"
+            print(saveFile+"---------")
+            with open(saveFile,'ab') as file:
+                file.write(img.content)
+        except Exception:
+            print('Error: ')
+            traceback.print_exc()
+        i += 1
+    print('finish')
+    
+if __name__ == '__main__':
+    te11 = '2020-06-15'
+    results_list, results_dict = get_query_wb(entity_list = ['新型冠状病毒'],since_date = te11,json=False, csv=True)
+#    imgurl = results_dict['用户头像']
+#    uid = results_dict['用户id']
+    path = 'home\\user02\\T02\\wb_crawl\\getHot\\'
+#    path = "F:\\Experiment\\科研训练\\微博爬虫\\crawlData\\"
+    downloadProfileImg(path,results_list)
