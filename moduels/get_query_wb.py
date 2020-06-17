@@ -42,7 +42,7 @@ def printJson(results_dict):
 
 
 def printCSV(results_list):
-    headers = ['检索词', '用户id', '用户名','用户头像', '微博id', '话题', '微博正文', '发表时间']
+    headers = ['检索词', '用户id', '用户名','用户头像', '微博id', '微博图片','话题', '微博正文', '发表时间']
     with open('query.csv', 'w', newline='', errors='ignore') as f:
         f_csv = csv.DictWriter(f, headers)
         f_csv.writeheader()
@@ -108,15 +108,15 @@ def get_info(search_list, since_date=None):
         # 获取多页该检索词的结果页面
         page = 0
         flag = True
-        while page<1 and flag == True:
+        while page<2 and flag == True:
             try:
                 page = page + 1
                 this_url = base_url + str(page)
-                proxypool_url = 'http://127.0.0.1:5555/random'
+#                proxypool_url = 'http://127.0.0.1:5555/random'
                 print('正在处理-->',this_url)
-                proxies = {'http': 'http://' + requests.get(proxypool_url).text.strip()}
-                r = requests.get(this_url, headers=headers,proxies = proxies)
-#                r = requests.get(this_url, headers=headers)
+#                proxies = {'http': 'http://' + requests.get(proxypool_url).text.strip()}
+#                r = requests.get(this_url, headers=headers,proxies = proxies)
+                r = requests.get(this_url, headers=headers)
                 r.raise_for_status()
                 r.encoding = r.apparent_encoding
                 content = json.loads(r.text)
@@ -126,12 +126,14 @@ def get_info(search_list, since_date=None):
                         mblog['created_at'] = standardize_date(mblog['created_at'])
                         this_topic, this_text = getText(mblog)
                         this_profileImgUrl  = getProfileImageUrl(mblog)
+                        weiboImg = getWeiboImageUrl(mblog)
                         this_dict = {
                                     '检索词': str(wd),
                                     '用户id': mblog['user']['id'], 
                                     '用户名': mblog['user']['screen_name'], 
                                     '用户头像':this_profileImgUrl,
                                     '微博id': mblog['id'],
+                                    '微博图片':weiboImg,
                                     '话题': this_topic,
                                     '微博正文': this_text,
                                     '发表时间': mblog['created_at']
@@ -194,6 +196,21 @@ def getProfileImageUrl(mblog):
         profile += r +'\n'
     return profile
     
+def getWeiboImageUrl(mblog):
+    try:
+        pic_num = mblog['pic_num']
+        wbImg = []
+        cnt = 0
+        if(pic_num > 0):
+            while(cnt < pic_num):
+                wbImg.append(mblog['pics'][cnt]['url'])
+                cnt += 1
+        return wbImg
+    except:
+        print (cnt,'error')
+        traceback.print_exc()
+    print('finish ---------getWeiboImageUrl')
+    
     
 #def downloadProfileImg(savepath, imgurl, uid):
 ##    img = requests.get(imgurl)
@@ -221,7 +238,7 @@ def downloadProfileImg(savepath, reslist):
     headers = {'User-Agent': 'Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US; rv:1.9.1.6) Gecko/20091201 Firefox/3.5.6'}
     i = 0
     length = len(reslist)
-    while i < length/2:
+    while i < length:
         try:
             
             imgurl = reslist[i]['用户头像']
@@ -239,11 +256,42 @@ def downloadProfileImg(savepath, reslist):
         i += 1
     print('finish')
     
-if __name__ == '__main__':
-    te11 = '2020-06-15'
-    results_list, results_dict = get_query_wb(entity_list = ['新型冠状病毒'],since_date = te11,json=False, csv=True)
+def downloadWeiboImg(savepath, reslist):
+#    img = requests.get(imgurl)
+#    file = open(savepath + '\\' + str(uid)+str(imgurl[-4:]),'ab')
+#    file.write(img.content)
+#    file.close()
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US; rv:1.9.1.6) Gecko/20091201 Firefox/3.5.6'}
+    i = 0
+    length = len(reslist)
+    while i < length:
+        try:
+            
+            imgurl = reslist[i]['微博图片']
+            cnt = 0
+            wbid = reslist[i]['微博id']
+            imglen = len(imgurl)
+            while(cnt < imglen):
+                img = requests.get(imgurl[cnt],headers=headers)
+                saveFile = savepath + str(wbid)+"_"+str(cnt)+".jpg"
+                print(saveFile+"---------")
+                cnt += 1
+                with open(saveFile,'ab') as file:
+                    file.write(img.content)
+        except Exception:
+            print('Error: ')
+            traceback.print_exc()
+        i += 1
+    print('finish')
+    
+#if __name__ == '__main__':
+#    te11 = '2020-06-15'
+#    results_list, results_dict = get_query_wb(entity_list = ['新型冠状病毒'],since_date = te11,json=False, csv=True)
+#    get_query_wb(entity_list = ['新型冠状病毒'],since_date = te11,json=False, csv=True)
 #    imgurl = results_dict['用户头像']
 #    uid = results_dict['用户id']
-    path = 'home\\user02\\T02\\wb_crawl\\getHot\\'
+#    path = 'home\\user02\\T02\\wb_crawl\\getHot\\'
 #    path = "F:\\Experiment\\科研训练\\微博爬虫\\crawlData\\"
-    downloadProfileImg(path,results_list)
+#    downloadProfileImg(path,results_list)
+#    path = "F:\\Experiment\\科研训练\\微博爬虫\\crawlData\\微博图片\\"
+#    downloadWeiboImg(path,results_list)
